@@ -75,8 +75,11 @@ def verify_signature(
 
     if not signature:
         return False
+    # The header carries a "sha256=" prefix (e.g. "sha256=<hex>"); strip it
+    # before comparing against the bare hex digest we compute.
+    provided = signature[7:] if signature.startswith("sha256=") else signature
     expected = compute_signature(payload, secret)
-    return hmac.compare_digest(expected, signature)
+    return hmac.compare_digest(expected, provided)
 
 
 def construct_event(

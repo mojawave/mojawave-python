@@ -32,6 +32,12 @@ def test_verify_signature_roundtrip():
     assert verify_signature(body, None, SECRET) is False
 
 
+def test_verify_signature_accepts_real_prefixed_header():
+    body = _payload()
+    header = f"sha256={compute_signature(body, SECRET)}"
+    assert verify_signature(body, header, SECRET) is True
+
+
 def test_construct_event_ok():
     body = _payload()
     sig = compute_signature(body, SECRET)
