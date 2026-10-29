@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Iterable, List, Mapping, Optional, Sequence, Union
 
 from .._transport import Transport
@@ -29,29 +30,38 @@ class SMSResource:
         *,
         to: str,
         message: str,
-        sender: str = "MojaWave",
+        sender: Optional[str] = None,
         webhook_url: Optional[str] = None,
         schedule_at: Optional[str] = None,
         metadata: Optional[Mapping[str, Any]] = None,
         tags: Optional[Sequence[str]] = None,
+        idempotency_key: Optional[str] = None,
     ) -> Message:
         """Send a single SMS.
 
         Args:
             to: Recipient phone in E.164 format, e.g. ``+255712345678``.
             message: Message content. Long messages are split into segments.
-            sender: Sender ID (max 11 alphanumeric chars) or ``MOJAWAVE``. Sent to
-                the API as the ``from`` field.
+            sender: Sender ID (max 11 alphanumeric chars), sent as ``from``. Leave
+                it out to use your organization's default sender (or the platform
+                sender if none is set).
             webhook_url: URL to receive delivery-status webhooks for this message.
             schedule_at: ISO-8601 timestamp for scheduled delivery.
             metadata: Custom key-value pairs echoed back for your own tracking.
             tags: Optional labels for categorising the message.
+            idempotency_key: Sent as the ``Idempotency-Key`` header. Retrying with
+                the same key never sends or charges the message twice. A key is
+                generated when omitted, so the SDK's automatic retries are safe.
 
         Returns:
-            The created :class:`~mojawave.models.Message`.
+            The created :class:`~mojawave.models.Message`. Its ``status`` is
+            ``queued`` for organizations that use queue-first sending: a worker
+            sends it moments later (use webhooks or :meth:`get` for the outcome).
         """
 
-        body: dict[str, Any] = {"to": to, "from": sender, "message": message}
+        body: dict[str, Any] = {"to": to, "message": message}
+        if sender is not None:
+            body["from"] = sender
         if webhook_url is not None:
             body["webhook_url"] = webhook_url
         if schedule_at is not None:
@@ -61,7 +71,12 @@ class SMSResource:
         if tags is not None:
             body["tags"] = list(tags)
 
-        data = self._transport.request("POST", "/sms/send", json=body)
+        data = self._transport.request(
+            "POST",
+            "/sms/send",
+            json=body,
+            extra_headers={"Idempotency-Key": idempotency_key or str(uuid.uuid4())},
+        )
         return Message.from_dict(data)
 
     def get(self, message_id: str) -> Message:

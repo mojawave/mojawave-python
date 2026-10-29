@@ -90,6 +90,7 @@ class Transport:
         *,
         json: Optional[Mapping[str, Any]] = None,
         params: Optional[Mapping[str, Any]] = None,
+        extra_headers: Optional[Mapping[str, str]] = None,
     ) -> Any:
         """Perform a request and return the unwrapped ``data`` payload.
 
@@ -105,6 +106,8 @@ class Transport:
             "Accept": "application/json",
             "User-Agent": self._user_agent,
         }
+        if extra_headers:
+            headers.update(extra_headers)
 
         attempt = 0
         while True:

@@ -135,3 +135,22 @@ def test_get_bulk(client):
     assert job.is_complete is True
     assert job.progress_percent == 100.0
     assert job.completed_at is not None
+
+
+@responses.activate
+def test_send_leaves_from_out_and_sends_an_idempotency_key(client):
+    import json
+
+    responses.post(f"{BASE}/sms/send", status=201, json={"data": {"id": "m1", "status": "queued"}})
+    msg = client.sms.send(to="+255753276939", message="Hello!")
+    assert msg.status == "queued"
+    req = responses.calls[0].request
+    assert "from" not in json.loads(req.body)
+    assert len(req.headers["Idempotency-Key"]) == 36
+
+
+@responses.activate
+def test_caller_idempotency_key_is_used(client):
+    responses.post(f"{BASE}/sms/send", status=201, json={"data": {"id": "m1", "status": "sent"}})
+    client.sms.send(to="+255753276939", message="Hello!", sender="ShuleMasta", idempotency_key="order-42")
+    assert responses.calls[0].request.headers["Idempotency-Key"] == "order-42"

@@ -8,7 +8,7 @@ from typing import Optional
 import requests
 
 from ._transport import DEFAULT_BASE_URL, RateLimit, Transport
-from .resources import CreditsResource, SMSResource
+from .resources import CreditsResource, ResellerResource, SMSResource
 
 # Environments share a host; the key prefix (sk_live_ / sk_test_) selects live
 # vs. sandbox server-side. We keep the enum for clarity and forward-compat.
@@ -68,6 +68,7 @@ class MojaWave:
 
         self.sms = SMSResource(self._transport)
         self.credits = CreditsResource(self._transport)
+        self.reseller = ResellerResource(self._transport)
 
     @property
     def rate_limit(self) -> Optional[RateLimit]:
